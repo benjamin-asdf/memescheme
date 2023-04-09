@@ -1,0 +1,10 @@
+* Concept
+
+A toy scheme interpreter for me to learn c.
+
+
+* build
+
+=make=
+
+./memescheme
