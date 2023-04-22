@@ -8,46 +8,68 @@ static bool is_whitespace(char c) {
     return isspace(c) || c == ',';
 }
 
-Token *tokenize(const char *input) {
-    Token *tokens = NULL;
+Token* tokenize(const char* input) {
+    Token* tokens = NULL;
     size_t size = 0;
     while (*input != '\0') {
         if (is_whitespace(*input)) {
             input++;
         } else if (*input == '(') {
             tokens = realloc(tokens, ++size * sizeof(Token));
-            tokens[size - 1].type = T_LPAREN;
+            if (tokens == NULL) {
+                perror("Error: unable to allocate memory");
+                exit(EXIT_FAILURE);
+            }
+            Token t = {.type = T_LPAREN};
+            tokens[size - 1] = t;
             input++;
         } else if (*input == ')') {
             tokens = realloc(tokens, ++size * sizeof(Token));
-            tokens[size - 1].type = T_RPAREN;
+            if (tokens == NULL) {
+                perror("Error: unable to allocate memory");
+                exit(EXIT_FAILURE);
+            }
+            Token t = {.type = T_RPAREN};
+            tokens[size - 1] = t;
             input++;
-        } else { /* symbol or number } */
+        } else {
             size_t len = 1;
             while (isalnum(input[len])) {
                 len++;
             }
-            char *lexeme = strndup(input, len);
+            char* lexeme = strndup(input, len);
             input += len;
-
+            
             tokens = realloc(tokens, ++size * sizeof(Token));
-            if (isdigit(*lexeme)) {
-                tokens[size - 1].type = T_NUMBER;
-                tokens[size - 1].value.number = strtol(lexeme, NULL, 10);
-                free(lexeme);
-            } else {
-                tokens[size - 1].type = T_SYMBOL;
-                tokens[size - 1].value.symbol = lexeme;
+            if (tokens == NULL) {
+                perror("Error: unable to allocate memory");
+                exit(EXIT_FAILURE);
             }
+            Token t;
+            if (isdigit(*lexeme)) {
+                t.type = T_NUMBER;
+                t.value.number = strtol(lexeme, NULL, 10);
+            } else {
+                t.type = T_SYMBOL;
+                t.value.symbol = lexeme;
+            }
+            tokens[size - 1] = t;
         }
     }
+    Token t = {.type = T_EOF};
     tokens = realloc(tokens, ++size * sizeof(Token));
-    tokens[size - 1].type = T_EOF;
+    if (tokens == NULL) {
+        perror("Error: unable to allocate memory");
+        exit(EXIT_FAILURE);
+    }
+    tokens[size - 1] = t;
     return tokens;
 }
 
 void free_tokens(Token *tokens) {
+    printf("free tokens...\n");
     for (size_t i = 0; tokens[i].type != T_EOF; i++) {
+        printf("%d\n", tokens[i].type);
         if (tokens[i].type == T_SYMBOL) {
             free(tokens[i].value.symbol);
         }
@@ -117,3 +139,44 @@ void free_node(Node *node) {
 }
 
 const Node *nil = NULL;
+
+Node* parse(Token **tokens_ptr) {
+  Token *tokens = *tokens_ptr;
+  if (!tokens) return NULL;
+
+  switch (tokens->type) {
+    case T_LPAREN: {
+      tokens++; // Consume T_LPAREN token
+      Node *head = NULL, *tail = NULL;
+      while (tokens->type != T_RPAREN && tokens->type != T_EOF) {
+        Node *new_node = cons(parse(&tokens), NULL); // Recursively parse
+        if (!head) {
+          head = new_node;
+          tail = new_node;
+        } else {
+          tail->value.cons.cdr = new_node;
+          tail = new_node;
+        }
+      }
+      if (tokens->type == T_RPAREN) {
+        tokens++; // Consume T_RPAREN token
+      }
+      *tokens_ptr = tokens;
+      return head;
+    }
+    case T_SYMBOL: {
+      Node* node = create_node(NODE_SYMBOL, tokens->value.symbol);
+      *tokens_ptr = tokens + 1;
+      return node;
+    }
+    case T_NUMBER: {
+      Node* node = create_node(NODE_NUMBER, &(tokens->value.number));
+      *tokens_ptr = tokens + 1;
+      return node;
+    }
+    default: {
+      return NULL;
+    }
+  }
+}
+

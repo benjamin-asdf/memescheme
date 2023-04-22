@@ -51,6 +51,7 @@ Node* cons(Node* car, Node* cdr);
 Node* car(const Node* cons_node);
 Node* cdr(const Node* cons_node);
 void free_node(Node* node);
+Node* parse(Token **tokens_ptr);
 
 extern const Node *nil;
 

@@ -6,7 +6,15 @@
 
 int main(void) {
 
+  const char *input = "(foo, (bar, (baz))) (hurr)";
+      
+  Token *tokens = tokenize(input);
+  Node *lst = parse(&tokens);
 
+  print_node(lst);
+  /* print_node(car(lst)); */
+  
+   free_tokens(tokens);
     
     return 0;
 }
